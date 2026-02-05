@@ -19,7 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 rag_system: Optional[FinTechRAG] = None
+
 
 
 class QuestionRequest(BaseModel):
@@ -33,18 +35,19 @@ class AnswerResponse(BaseModel):
     query: str
 
 
-@app.on_event("startup")
-async def startup_event():
-    global rag_system
-    rag_system = FinTechRAG(
-        data_path=os.getenv("DATA_PATH"),
-        vector_db_path=os.getenv("VECTOR_DB_PATH")
-    )
 
 
 @app.get("/")
 async def root():
     return {"status": "API running"}
+
+
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 
 
 @app.post("/ask", response_model=AnswerResponse)
@@ -54,8 +57,18 @@ async def ask_question(request: QuestionRequest):
 
     try:
 
+        if rag_system is None:
+            print("Creating RAG instance...")
+            rag_system = FinTechRAG(
+                data_path=os.getenv("DATA_PATH"),
+                vector_db_path=os.getenv("VECTOR_DB_PATH")
+            )
+
         if rag_system.qa_chain is None:
+            print("Initializing RAG system...")
             rag_system.initialize()
+
+        print("Processing question:", request.question)
 
         result = rag_system.ask(request.question)
 
@@ -70,11 +83,3 @@ async def ask_question(request: QuestionRequest):
     except Exception as e:
         print("API ERROR:", e)
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-
-
