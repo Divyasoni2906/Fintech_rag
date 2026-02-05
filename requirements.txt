@@ -10,3 +10,5 @@ python-dotenv
 pymupdf
 requests
 huggingface_hub
+langchain-google-genai
+google-generativeai
